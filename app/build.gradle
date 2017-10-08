@@ -6,6 +6,8 @@ android {
     defaultConfig {
         applicationId "com.google.android.diskusage"
         targetSdkVersion 19
+        minSdkVersion 14
+        maxSdkVersion 25   // for api-26 and newer use official 0.4.* version
 
 //        ndk {
 //            moduleName "scan"

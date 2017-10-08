@@ -333,6 +333,87 @@ public class DiskUsage extends LoadableActivity {
     return res.size() > 0;
   }
 
+  private void openDirectoryInFilemanager(Uri uri) {
+    if (viewDirectoryInFilemanager(uri,
+            "vnd.android.document/directory",  // DocumentsContract.Document.MIME_TYPE_DIR = "vnd.android.document/directory" since android api-19
+            "vnd.android.cursor.item/com.metago.filemanager.dir", // old Astro
+            "resource/folder", // EsFileExplorer and others  https://stackoverflow.com/questions/17165972/android-how-to-open-a-specific-folder-via-intent-and-show-its-content-in-a-file
+            "inode/directory" // https://stackoverflow.com/questions/18869772/mime-type-for-a-directory
+            // "text/direcotry" this would conflict with text editors also mentioned in https://stackoverflow.com/questions/18869772/mime-type-for-a-directory
+    )) return;
+    Intent intent;
+
+    intent = new Intent("org.openintents.action.VIEW_DIRECTORY");
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    intent.setData(uri);
+
+    try {
+      startActivity(intent);
+      return;
+    } catch(ActivityNotFoundException e) {
+    }
+
+    intent = new Intent("org.openintents.action.PICK_DIRECTORY");
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    intent.setData(uri);
+    intent.putExtra("org.openintents.extra.TITLE",
+            str(R.string.title_in_oi_file_manager));
+    intent.putExtra("org.openintents.extra.BUTTON_TEXT",
+            str(R.string.button_text_in_oi_file_manager));
+
+    try {
+      startActivity(intent);
+      return;
+    } catch(ActivityNotFoundException e) {
+    }
+
+    final Intent installSolidExplorer = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=pl.solidexplorer"));
+
+    if (isIntentAvailable(installSolidExplorer)) {
+      new AlertDialog.Builder(this)
+              .setCancelable(true)
+              .setTitle("Missing compatible file manager")
+              .setMessage("No compatible filemanager found.\n\nAsk you favorite file manager developer " +
+                      "for integration with DiskUsage or install:" +
+                      "\n * Solid Explorer" +
+                      "\n * OI File Manager")
+              .setPositiveButton("Install Solid Explorer", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface arg0, int arg1) {
+                  startActivity(installSolidExplorer);
+                }
+              })
+              .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface arg0, int arg1) {
+                  // pass
+                }
+              })
+              .create().show();
+    } else {
+      Toast.makeText(this, str(R.string.install_oi_file_manager),
+              Toast.LENGTH_SHORT).show();
+    }
+    return;
+  }
+
+  private boolean viewDirectoryInFilemanager(Uri uri, String... mimes) {
+    Intent intent;
+    for (String mime : mimes) {
+      intent = new Intent(Intent.ACTION_VIEW);
+      intent.addCategory(Intent.CATEGORY_OPENABLE);
+      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      intent.setDataAndType(uri, mime);
+
+      try {
+        startActivity(intent);
+        return true;
+      } catch (ActivityNotFoundException e) {
+      }
+    }
+    return false;
+  }
+
   public void view(FileSystemEntry entry) {
     Intent intent = new Intent(Intent.ACTION_VIEW);
     intent.addCategory(Intent.CATEGORY_DEFAULT);
@@ -353,79 +434,7 @@ public class DiskUsage extends LoadableActivity {
     Uri uri = Uri.fromFile(file);
 
     if (file.isDirectory()) {
-//      intent = new Intent(Intent.ACTION_GET_CONTENT);
-//      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//      intent.setDataAndType(uri, "file/*");
-//
-//      try {
-//        startActivity(intent);
-//        return;
-//      } catch(ActivityNotFoundException e) {
-//      }
-
-      intent = new Intent("org.openintents.action.VIEW_DIRECTORY");
-      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      intent.setData(uri);
-
-      try {
-        startActivity(intent);
-        return;
-      } catch(ActivityNotFoundException e) {
-      }
-
-      intent = new Intent("org.openintents.action.PICK_DIRECTORY");
-      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      intent.setData(uri);
-      intent.putExtra("org.openintents.extra.TITLE",
-          str(R.string.title_in_oi_file_manager));
-      intent.putExtra("org.openintents.extra.BUTTON_TEXT",
-          str(R.string.button_text_in_oi_file_manager));
-
-      try {
-        startActivity(intent);
-        return;
-      } catch(ActivityNotFoundException e) {
-      }
-
-      // old Astro
-      intent = new Intent(Intent.ACTION_VIEW);
-      intent.addCategory(Intent.CATEGORY_DEFAULT);
-      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      intent.setDataAndType(uri, "vnd.android.cursor.item/com.metago.filemanager.dir");
-
-      try {
-        startActivity(intent);
-        return;
-      } catch(ActivityNotFoundException e) {
-      }
-
-      final Intent installSolidExplorer = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=pl.solidexplorer"));
-
-      if (isIntentAvailable(installSolidExplorer)) {
-        new AlertDialog.Builder(this)
-        .setCancelable(true)
-        .setTitle("Missing compatible file manager")
-        .setMessage("No compatible filemanager found.\n\nAsk you favorite file manager developer " +
-            "for integration with DiskUsage or install:" +
-            "\n * Solid Explorer" +
-            "\n * OI File Manager")
-            .setPositiveButton("Install Solid Explorer", new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(DialogInterface arg0, int arg1) {
-                startActivity(installSolidExplorer);
-              }
-            })
-            .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(DialogInterface arg0, int arg1) {
-                // pass
-              }
-            })
-            .create().show();
-      } else {
-      Toast.makeText(this, str(R.string.install_oi_file_manager),
-          Toast.LENGTH_SHORT).show();
-      }
+      openDirectoryInFilemanager(uri);
       return;
     }
 
